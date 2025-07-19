@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Course {
+  BACHELOR_OF_SCIENCE_IN_COMPUTER_SCIENCE       @map("Bachelor of Science in Computer Science")
+  BACHELOR_OF_SCIENCE_IN_INFORMATION_TECHNOLOGY @map("Bachelor of Science in Information Technology")
+  BACHELOR_OF_SCIENCE_IN_INFORMATION_SYSTEM     @map("Bachelor of Science in Information System")
+  BACHELOR_OF_SCIENCE_IN_MULTIMEDIA_COMPUTING   @map("Bachelor of Science in Multimedia Computing")
+}
+
+enum Section {
+  A @map("A")
+  B @map("B")
+  C @map("C")
+}
+
+enum Year {
+  FIRST @map("1st")
+  SECOND @map("2nd")
+  THIRD @map("3rd")
+  FOURTH @map("4th")
+}
+
+enum Semester {
+  FIRST @map("1st")
+  SECOND @map("2nd")
+}
+
+model Student {
+  id              String @id @default(uuid())
+  firstName       String
+  lastName        String
+  course          Course
+  section         Section
+  year            Year      
+  semester        Semester        
+  student_number  String @unique
+  imageUrl        String?
+  gwa             Float?    // optional, computed on evaluation
+  subjects        Subject[] // one-to-many relationship
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String
+  @@unique([firstName, lastName]) // This means no two students can share the same combination of firstName and lastName
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  units       Float
+  grade       Float
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
