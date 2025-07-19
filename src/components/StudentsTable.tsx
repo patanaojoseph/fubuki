@@ -17,6 +17,8 @@ import {
   Trash2,
   GraduationCap,
   User,
+  Eye,
+  MoreVertical,
 } from "lucide-react";
 import Container from "./global/Container";
 import { ComboBox } from "./ui/combo-box";
@@ -36,7 +38,6 @@ import {
   DialogTrigger,
 } from "@radix-ui/react-dialog";
 import AddStudentDialog from "./AddStudentDialog";
-import { AlertDialogTrigger } from "./ui/alert-dialog";
 
 type Student = Awaited<ReturnType<typeof getStudents>>;
 
@@ -115,14 +116,20 @@ export default function StudentsTable({
   const router = useRouter();
 
   const filteredStudents = students?.userStudents?.filter((student) => {
+    const search = searchTerm.toLowerCase();
+
     const fullNameMatch =
-      student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.lastName.toLowerCase().includes(searchTerm.toLowerCase());
+      student.firstName.toLowerCase().includes(search) ||
+      student.lastName.toLowerCase().includes(search);
+
+    const studentNumberMatch = student.student_number
+      .toLowerCase()
+      .includes(search);
 
     const matchesCourse =
       selectedCourse === "" || student.course === selectedCourse;
 
-    return fullNameMatch && matchesCourse;
+    return (fullNameMatch || studentNumberMatch) && matchesCourse;
   });
 
   const handleStudentClick = (student: any) => {
@@ -143,7 +150,7 @@ export default function StudentsTable({
     setTimeout(() => setIsFiltering(false), 300);
   };
 
-  // Helper Functions
+  // Helper Utility Functions
   const courseLabels: Record<string, string> = {
     BACHELOR_OF_SCIENCE_IN_COMPUTER_SCIENCE: "BS Computer Science",
     BACHELOR_OF_SCIENCE_IN_INFORMATION_TECHNOLOGY: "BS Information Technology",
@@ -212,6 +219,8 @@ export default function StudentsTable({
       />
     </svg>
   );
+
+  const [openMenuId, setOpenMenuId] = useState(null);
   return (
     <Container>
       <div className='w-full space-y-2'>
@@ -319,39 +328,10 @@ export default function StudentsTable({
           </div>
         </div>
         {/* Search and Filter Section */}
-        {/* <Card className='border-0 shadow-xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900'>
-          <CardContent className='p-6'>
-            <div className='flex flex-col md:flex-row items-center gap-4'>
-              <div className='relative flex-1 max-w-md'>
-                <Input
-                  placeholder='Search students by name...'
-                  className='pl-12 h-12 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-                <Search className='absolute h-5 w-5 left-4 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500' />
-              </div>
-              <div className='flex items-center gap-2'>
-                <Filter className='h-4 w-4 text-slate-600 dark:text-slate-400' />
-                <ComboBox value={selectedCourse} onChange={setSelectedCourse} />
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className='group relative h-12 px-6 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 hover:from-emerald-500 hover:via-emerald-600 hover:to-emerald-700 text-white border-0 shadow-2xl hover:shadow-emerald-500/25 transition-all duration-500 transform hover:-translate-y-1 font-bold text-base rounded-2xl'>
-                    <div className='absolute -top-1 -left-1 -right-1 -bottom-1 bg-gradient-to-br from-emerald-300 to-emerald-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm'></div>
-                    <Plus className='h-6 w-6 mr-3 group-hover:rotate-90 transition-transform duration-300' />
-                    <span className='relative z-10'>Add New Student</span>
-                  </Button>
-                </DialogTrigger>
-                <AddStudentDialog />
-              </Dialog>
-            </div>
-          </CardContent>
-        </Card> */}
-
         <Card className='border-0 shadow-xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900'>
           <CardContent className='p-6'>
             <div className='flex flex-col md:flex-row items-center gap-4'>
+              {/* Search Name */}
               <div className='relative flex-1 max-w-md'>
                 <Input
                   placeholder='Search students by name...'
@@ -361,10 +341,12 @@ export default function StudentsTable({
                 />
                 <Search className='absolute h-5 w-5 left-4 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500' />
               </div>
+              {/* Filter Course */}
               <div className='flex items-center gap-2'>
                 <Filter className='h-4 w-4 text-slate-600 dark:text-slate-400' />
                 <ComboBox value={selectedCourse} onChange={setSelectedCourse} />
               </div>
+              {/* Add Student Button */}
               <div className='md:ml-auto'>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -517,30 +499,82 @@ export default function StudentsTable({
                               {semesterLabels[semester]} Semester
                             </span>
                           </TableCell>
+                          {/* Updated TableCell for Actions column */}
                           <TableCell className='py-4 text-right'>
-                            <div className='flex justify-end items-center gap-2'>
+                            <div className='flex justify-end items-center gap-2 relative'>
                               <Button
                                 variant='ghost'
                                 size='sm'
-                                className='h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300'
+                                className='h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // Handle edit action
+                                  setOpenMenuId(openMenuId === id ? null : id);
                                 }}
                               >
-                                <Edit3 className='h-4 w-4' />
+                                <MoreVertical className='h-4 w-4' />
                               </Button>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300'
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Handle delete action
-                                }}
-                              >
-                                <Trash2 className='h-4 w-4' />
-                              </Button>
+
+                              {/* Dropdown Menu */}
+                              {openMenuId === id && (
+                                <>
+                                  {/* Backdrop to close menu when clicking outside */}
+                                  <div
+                                    className='fixed inset-0 z-10'
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(null);
+                                    }}
+                                  />
+
+                                  {/* Menu Content */}
+                                  <div className='absolute right-6 top-[-62px] w-36 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1'>
+                                    <Button
+                                      variant='ghost'
+                                      size='sm'
+                                      className='w-full justify-start px-3 py-2 h-auto hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        // Handle evaluate action
+                                        console.log("Evaluate student:", id);
+                                      }}
+                                    >
+                                      <Eye className='h-4 w-4 mr-2' />
+                                      Evaluate
+                                    </Button>
+
+                                    <Button
+                                      variant='ghost'
+                                      size='sm'
+                                      className='w-full justify-start px-3 py-2 h-auto hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        // Handle edit action
+                                        console.log("Edit student:", id);
+                                      }}
+                                    >
+                                      <Edit3 className='h-4 w-4 mr-2' />
+                                      Edit
+                                    </Button>
+
+                                    <Button
+                                      variant='ghost'
+                                      size='sm'
+                                      className='w-full justify-start px-3 py-2 h-auto hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        // Handle delete action
+                                        console.log("Delete student:", id);
+                                      }}
+                                    >
+                                      <Trash2 className='h-4 w-4 mr-2' />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

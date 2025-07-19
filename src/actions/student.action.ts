@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserId } from "./user.action";
 import { revalidatePath } from "next/cache";
 
-export async function getStudents(searchTerm?: String) {
+export async function getStudents(searchTerm?: string) {
   try {
     const currentUserId = await getUserId();
     console.log("CURRENT USER ID:", currentUserId);
@@ -15,6 +15,7 @@ export async function getStudents(searchTerm?: String) {
           OR: [
             { firstName: { contains: searchTerm, mode: "insensitive" } },
             { lastName: { contains: searchTerm, mode: "insensitive" } },
+            { student_number: { contains: searchTerm, mode: "insensitive" } },
           ],
         }),
       },

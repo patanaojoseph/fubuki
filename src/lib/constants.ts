@@ -36,19 +36,19 @@ export const SECTION_OPTIONS = [
 
 export const YEAR_OPTIONS = [
   {
-    label: "First",
+    label: "1st",
     value: "1st",
   },
   {
-    label: "Second",
+    label: "2nd",
     value: "2nd",
   },
   {
-    label: "Third",
+    label: "3rd",
     value: "3rd",
   },
   {
-    label: "Fourth",
+    label: "4th",
     value: "4th",
   },
 ];
