@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserId } from "./user.action";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma";
 
 export async function getStudents(searchTerm?: string) {
   try {
@@ -33,11 +34,6 @@ export async function getStudents(searchTerm?: string) {
   }
 }
 
-// export async function getStudentById(id: string) {
-//   return await prisma.student.findUnique({
-//     where: { id },
-//   });
-// }
 export async function getStudentById(id: string) {
   try {
     if (!id || typeof id !== "string") {
@@ -50,5 +46,44 @@ export async function getStudentById(id: string) {
   } catch (error) {
     console.error("Error fetching student by ID:", error);
     return null;
+  }
+}
+// type StudentFormInput = Omit<Prisma.StudentCreateInput, "userId">;
+// Store Student Method
+export async function storeStudent(data: Prisma.StudentCreateInput) {
+  console.log("creating student");
+  console.log(data);
+  try {
+    const currentUserId = await getUserId();
+    if (!currentUserId) return;
+    const newStudent = await prisma.student.create({
+      data: {
+        ...data,
+        userId: currentUserId,
+      },
+    });
+    revalidatePath("/students");
+    return newStudent;
+  } catch (error) {
+    console.error("Error Storing Student data:", error);
+    throw error;
+  }
+}
+
+// Edit Student Method
+export async function editStudent(id: string, data: Prisma.StudentUpdateInput) {
+  try {
+    const currentUserId = await getUserId();
+    const updatedStudent = await prisma.student.update({
+      where: { id },
+      data: {
+        ...data,
+        userId: currentUserId,
+      },
+    });
+    revalidatePath("/students");
+  } catch (error) {
+    console.error("Error Updating Student data:", error);
+    throw error;
   }
 }

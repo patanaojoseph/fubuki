@@ -37,29 +37,29 @@ export const SECTION_OPTIONS = [
 export const YEAR_OPTIONS = [
   {
     label: "1st",
-    value: "1st",
+    value: "FIRST",
   },
   {
     label: "2nd",
-    value: "2nd",
+    value: "SECOND",
   },
   {
     label: "3rd",
-    value: "3rd",
+    value: "THIRD",
   },
   {
     label: "4th",
-    value: "4th",
+    value: "FOURTH",
   },
 ];
 
 export const SEMESTER_LEVEL = [
   {
     label: "1st",
-    value: "1st",
+    value: "FIRST",
   },
   {
     label: "2nd",
-    value: "2nd",
+    value: "SECOND",
   },
 ];
