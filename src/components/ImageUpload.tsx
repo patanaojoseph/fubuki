@@ -1,7 +1,7 @@
 import { OurFileRouter } from "@/app/api/uploadthing/core";
 import { UploadDropzone } from "@uploadthing/react";
 import React, { useState } from "react";
-import { Upload, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 
 interface ImageUploadProps {
   endpoint: keyof OurFileRouter;
@@ -94,10 +94,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             endpoint={endpoint}
             onClientUploadComplete={(res) => {
               if (res && res[0]) {
-                onChange(res[0].url);
+                // onChange(res[0].url);
+                onChange(res[0].ufsUrl);
                 console.log("Files: ", res);
-                // Remove the alert for better UX
-                // alert("Upload Completed");
               }
               setIsUploading(false);
             }}
@@ -124,7 +123,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             content={{
               uploadIcon: () => <Upload className='h-4 w-4' />,
               label: () => (
-                <span className='ml-2 mb-4'>
+                // <span className='ml-2 mb-4'>
+                //   {isUploading ? "Uploading..." : "Choose image or drag here"}
+                // </span>
+                <span className='ml-2 mb-4 flex items-center gap-2'>
+                  {isUploading && <Loader2 className='h-4 w-4 animate-spin' />}
                   {isUploading ? "Uploading..." : "Choose image or drag here"}
                 </span>
               ),

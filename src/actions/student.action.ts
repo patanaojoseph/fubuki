@@ -48,7 +48,6 @@ export async function getStudentById(id: string) {
     return null;
   }
 }
-// type StudentFormInput = Omit<Prisma.StudentCreateInput, "userId">;
 // Store Student Method
 export async function storeStudent(data: Prisma.StudentCreateInput) {
   console.log("creating student");
@@ -69,6 +68,29 @@ export async function storeStudent(data: Prisma.StudentCreateInput) {
     throw error;
   }
 }
+// export async function storeStudent(
+//   data: Omit<Prisma.StudentCreateInput, "userId">
+// ) {
+//   console.log("creating student");
+//   console.log(data);
+//   try {
+//     const currentUserId = await getUserId();
+//     if (!currentUserId) return;
+
+//     const newStudent = await prisma.student.create({
+//       data: {
+//         ...data,
+//         userId: currentUserId,
+//       },
+//     });
+
+//     revalidatePath("/students");
+//     return newStudent;
+//   } catch (error) {
+//     console.error("Error Storing Student data:", error);
+//     throw error;
+//   }
+// }
 
 // Edit Student Method
 export async function editStudent(id: string, data: Prisma.StudentUpdateInput) {
@@ -84,6 +106,89 @@ export async function editStudent(id: string, data: Prisma.StudentUpdateInput) {
     revalidatePath("/students");
   } catch (error) {
     console.error("Error Updating Student data:", error);
+    throw error;
+  }
+}
+
+// Update student function
+export async function updateStudent(
+  studentId: string,
+  data: Prisma.StudentUpdateInput
+) {
+  console.log("updating student with ID:", studentId);
+  console.log("update data:", data);
+
+  try {
+    const currentUserId = await getUserId();
+    if (!currentUserId) {
+      throw new Error("User not authenticated");
+    }
+
+    // First, verify the student belongs to the current user
+    const existingStudent = await prisma.student.findFirst({
+      where: {
+        id: studentId,
+        userId: currentUserId,
+      },
+    });
+
+    if (!existingStudent) {
+      throw new Error("Student not found or unauthorized");
+    }
+
+    // Update the student
+    const updatedStudent = await prisma.student.update({
+      where: {
+        id: studentId,
+      },
+      data: {
+        ...data,
+        // Ensure userId remains the same (security measure)
+        userId: currentUserId,
+      },
+    });
+
+    revalidatePath("/students");
+    return updatedStudent;
+  } catch (error) {
+    console.error("Error updating student data:", error);
+    throw error;
+  }
+}
+
+// Delete student function
+export async function deleteStudent(studentId: string) {
+  console.log("deleting student with ID:", studentId);
+
+  try {
+    const currentUserId = await getUserId();
+    if (!currentUserId) {
+      throw new Error("User not authenticated");
+    }
+
+    // First, verify the student belongs to the current user
+    const existingStudent = await prisma.student.findFirst({
+      where: {
+        id: studentId,
+        userId: currentUserId,
+      },
+    });
+
+    if (!existingStudent) {
+      throw new Error("Student not found or unauthorized");
+    }
+
+    // Delete the student
+    const deletedStudent = await prisma.student.delete({
+      where: {
+        id: studentId,
+      },
+    });
+
+    revalidatePath("/students");
+    return deletedStudent;
+  } catch (error) {
+    console.error("Error deleting student:", error);
     throw error;
   }
 }

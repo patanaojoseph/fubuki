@@ -1,3 +1,5 @@
+"use client";
+
 import {
   DialogClose,
   DialogContent,
@@ -14,11 +16,10 @@ import {
   GraduationCap,
   BookOpen,
   Calendar,
-  Upload,
-  X,
-  Check,
   Layout,
   Loader2,
+  UserPlus,
+  Edit3,
 } from "lucide-react";
 import {
   COURSE_OPTIONS,
@@ -26,45 +27,45 @@ import {
   YEAR_OPTIONS,
   SEMESTER_LEVEL,
 } from "@/lib/constants"; // adjust if your path is different
-import React, { useState } from "react";
-import { storeStudent } from "@/actions/student.action";
+import React, { useState, useEffect } from "react";
+import { storeStudent, updateStudent } from "@/actions/student.action";
 import { toast } from "sonner";
 import { Course, Section, Semester, Year } from "@/generated/prisma";
 import ImageUpload from "./ImageUpload";
 
-export default function AddStudentDialog() {
+// Define the student type based on your existing structure
+type StudentData = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  course: string;
+  section: string;
+  year: string;
+  semester: string;
+  student_number: string;
+  imageUrl: string;
+};
+
+interface AddStudentDialogProps {
+  mode?: "add" | "edit";
+  studentData?: StudentData | null;
+  onSubmit?: (data: StudentData) => Promise<void> | void;
+  onClose?: () => void;
+}
+
+export default function AddStudentDialog({
+  mode = "add",
+  studentData = null,
+  onSubmit,
+  onClose,
+}: AddStudentDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(Date.now()); // forces <input> remount
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please select a valid image file");
-        return;
-      }
-      // Validate file size (limit: 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size must be less than 5MB");
-        return;
-      }
-      // Store file object in state
-      setSelectedFile(file);
-      // Set image preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      // Store filename in form data
-      handleChange("imageUrl", file.name); // or URL if uploading later
-    }
-  };
-
   const [formData, setFormData] = useState({
+    id: "",
     firstName: "",
     lastName: "",
     course: "",
@@ -74,6 +75,39 @@ export default function AddStudentDialog() {
     student_number: "",
     imageUrl: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Partial<StudentData>>({});
+
+  // Populate form data when in edit mode
+  useEffect(() => {
+    if (mode === "edit" && studentData) {
+      setFormData({
+        id: studentData.id || "",
+        firstName: studentData.firstName || "",
+        lastName: studentData.lastName || "",
+        course: studentData.course || "",
+        section: studentData.section || "",
+        year: studentData.year || "",
+        semester: studentData.semester || "",
+        student_number: studentData.student_number || "",
+        imageUrl: studentData.imageUrl || "",
+      });
+    } else {
+      // Reset form for add mode
+      setFormData({
+        id: "",
+        firstName: "",
+        lastName: "",
+        course: "",
+        section: "",
+        year: "",
+        semester: "",
+        student_number: "",
+        imageUrl: "",
+      });
+    }
+  }, [mode, studentData]);
+
   const handleChange = (field: string, value: string | number) => {
     console.log(`Field changed: ${field}, New Value: ${value}`);
     setFormData({ ...formData, [field]: value });
@@ -86,50 +120,143 @@ export default function AddStudentDialog() {
   //     console.error("Error storing student data", error);
   //   }
   // };
-  const handleAddStudent = async (event: React.FormEvent<HTMLFormElement>) => {
+  // const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
+  //   setIsLoading(true);
+
+  //   setIsLoading(true);
+
+  //   try {
+  //     if (mode === "add") {
+  //       const newStudent = await storeStudent({
+  //         firstName: formData.firstName,
+  //         lastName: formData.lastName,
+  //         student_number: formData.student_number,
+  //         course: formData.course as Course,
+  //         section: formData.section as Section,
+  //         year: formData.year as Year,
+  //         semester: formData.semester as Semester,
+  //         imageUrl: formData.imageUrl || null,
+  //         gwa: null,
+  //         userId: "your-user-id", // replace this with actual logic
+  //         subjects: {
+  //           create: [],
+  //         },
+  //       });
+
+  //       console.log("Student created:", newStudent);
+  //       toast.success("Student added successfully!");
+  //     } else {
+  //       // If onSubmit is passed, delegate edit logic to parent
+  //       if (onSubmit) {
+  //         await onSubmit(formData);
+  //         toast.success("Student updated successfully!");
+  //       }
+  //     }
+
+  //     // Reset form only when adding
+  //     if (mode === "add") {
+  //       setFormData({
+  //         firstName: "",
+  //         lastName: "",
+  //         student_number: "",
+  //         course: "",
+  //         section: "",
+  //         year: "",
+  //         semester: "",
+  //         imageUrl: "",
+  //       });
+  //       setSelectedFile(null);
+  //       setImagePreview(null);
+  //       setFileInputKey(Date.now()); // reset file input key
+  //     }
+
+  //     if (onClose) {
+  //       onClose();
+  //     }
+  //   } catch (error) {
+  //     console.error(
+  //       `Error ${mode === "add" ? "adding" : "submitting"} student:`,
+  //       error
+  //     );
+  //     toast.error(`Failed to ${mode === "add" ? "add" : "update"} student.`);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  const resetForm = () => {
+    setFormData({
+      id: "",
+      firstName: "",
+      lastName: "",
+      student_number: "",
+      course: "",
+      section: "",
+      year: "",
+      semester: "",
+      imageUrl: "",
+    });
+  };
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
 
     try {
-      const newStudent = await storeStudent({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        student_number: formData.student_number,
-        course: formData.course as Course, // cast to enum
-        section: formData.section as Section,
-        year: formData.year as Year,
-        semester: formData.semester as Semester,
-        imageUrl: formData.imageUrl || null,
-        gwa: null, // optional
-        userId: "your-user-id",
-        subjects: {
-          create: [], // start with no subjects
-        },
-      });
+      if (mode === "add") {
+        // The storeStudent function handles userId internally, so we don't need to include it
+        const newStudent = await storeStudent({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          student_number: formData.student_number,
+          course: formData.course as Course,
+          section: formData.section as Section,
+          year: formData.year as Year,
+          semester: formData.semester as Semester,
+          imageUrl: formData.imageUrl || null,
+          gwa: null,
+          userId: "your-user-id",
+        });
 
-      console.log("Student created:", newStudent);
+        console.log("Student created:", newStudent);
+        toast.success("Student added successfully!");
 
-      // Reset form or show success feedback
-      setFormData({
-        firstName: "",
-        lastName: "",
-        course: "",
-        section: "",
-        year: "",
-        semester: "",
-        student_number: "",
-        imageUrl: "",
-      });
-      setSelectedFile(null);
-      setImagePreview(null);
-      setFileInputKey(Date.now()); // Reset file input
+        // Reset form after adding
+        resetForm();
+        setSelectedFile(null);
+        setImagePreview(null);
+        setFileInputKey(Date.now());
+      } else if (mode === "edit" && studentData?.id) {
+        // Use the update method
+        const updatedStudent = await updateStudent(studentData.id, {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          student_number: formData.student_number,
+          course: formData.course as Course,
+          section: formData.section as Section,
+          year: formData.year as Year,
+          semester: formData.semester as Semester,
+          imageUrl: formData.imageUrl || null,
+        });
 
-      toast.success("Student added successfully!");
+        console.log("Student updated:", updatedStudent);
+        toast.success("Student updated successfully!");
 
-      // Optional: Reset form, show toast, etc.
+        // If onSubmit callback is provided, call it with the updated data
+        if (onSubmit) {
+          await onSubmit(formData);
+        }
+      }
+
+      if (onClose) {
+        onClose();
+      }
     } catch (error) {
-      console.error("Error storing student data", error);
-      toast.error("Failed to add student. Please try again.");
+      console.error(
+        `Error ${mode === "add" ? "adding" : "updating"} student:`,
+        error
+      );
+      toast.error(`Failed to ${mode === "add" ? "add" : "update"} student.`);
     } finally {
       setIsLoading(false);
     }
@@ -140,6 +267,10 @@ export default function AddStudentDialog() {
     setImagePreview(null);
     setFileInputKey(Date.now());
     handleChange("imageUrl", "");
+    setFormData((prev) => ({
+      ...prev,
+      imageUrl: "",
+    }));
   };
 
   return (
@@ -153,16 +284,18 @@ export default function AddStudentDialog() {
           </div>
           <div>
             <DialogTitle className='text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent'>
-              Add New Student
+              {mode === "add" ? <>Add New Student</> : <>Edit Student</>}
             </DialogTitle>
             <DialogDescription className='text-slate-600 dark:text-slate-400 mt-1'>
-              Create a new student profile with their academic information
+              {mode === "add"
+                ? "Create a new student profile with their academic information"
+                : "Update a student's information below."}
             </DialogDescription>
           </div>
         </div>
       </DialogHeader>
 
-      <form onSubmit={handleAddStudent}>
+      <form onSubmit={handleSubmit}>
         <div className='relative z-10 space-y-3 py-3'>
           {/* Personal Information Section */}
           <div className='space-y-4'>
@@ -406,6 +539,7 @@ export default function AddStudentDialog() {
                 onChange={(url) => {
                   handleChange("imageUrl", url);
                 }}
+                onRemove={removeFile}
               />
             </div>
           </div>
@@ -415,25 +549,47 @@ export default function AddStudentDialog() {
               <Button
                 variant='outline'
                 className='flex-1 sm:flex-none h-10 border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-all duration-200 backdrop-blur-sm'
+                onClick={onClose}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
             </DialogClose>
             <Button
               type='submit'
-              disabled={isLoading}
-              className='group flex-1 sm:flex-none h-10 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 hover:from-emerald-600 hover:via-emerald-700 hover:to-emerald-800 text-white font-bold shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 transform hover:-translate-y-0.5'
+              disabled={isLoading || isSubmitting}
+              className={`group flex-1 sm:flex-none h-10 text-white font-bold shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 ${
+                mode === "add"
+                  ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 hover:from-emerald-600 hover:via-emerald-700 hover:to-emerald-800 hover:shadow-emerald-500/25"
+                  : "bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 hover:shadow-blue-500/25"
+              }`}
             >
-              <div className='absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-md opacity-0 group-hover:opacity-20 transition-opacity duration-300'></div>
-              {isLoading ? (
+              <div
+                className={`absolute inset-0 rounded-md opacity-0 group-hover:opacity-20 transition-opacity duration-300 ${
+                  mode === "add"
+                    ? "bg-gradient-to-r from-emerald-400 to-emerald-600"
+                    : "bg-gradient-to-r from-blue-400 to-blue-600"
+                }`}
+              ></div>
+
+              {isLoading || isSubmitting ? (
                 <div className='relative z-10 flex items-center gap-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />
-                  <span>Adding...</span>
+                  <span>{mode === "add" ? "Adding..." : "Updating..."}</span>
                 </div>
               ) : (
                 <>
-                  <GraduationCap className='h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300' />
-                  <span className='relative z-10'>Add Student</span>
+                  {mode === "add" ? (
+                    <>
+                      <UserPlus className='h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300' />
+                      <span className='relative z-10'>Add Student</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className='h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300' />
+                      <span className='relative z-10'>Update Student</span>
+                    </>
+                  )}
                 </>
               )}
             </Button>

@@ -22,13 +22,18 @@ import {
 import Container from "./global/Container";
 import { ComboBox } from "./ui/combo-box";
 import { useState } from "react";
-import { getStudents } from "@/actions/student.action";
+import {
+  deleteStudent,
+  getStudents,
+  storeStudent,
+} from "@/actions/student.action";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Dialog, DialogFooter, DialogHeader } from "./ui/dialog";
+import { toast } from "sonner";
 import {
   DialogClose,
   DialogContent,
@@ -38,12 +43,15 @@ import {
 } from "@radix-ui/react-dialog";
 import AddStudentDialog from "./AddStudentDialog";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Student = Awaited<ReturnType<typeof getStudents>>;
 
@@ -114,13 +122,25 @@ function TableRowSkeleton() {
 
 export default function StudentsTable({
   students,
+  currentUserId,
   isLoading = false,
 }: StudentsTableProps) {
   const [selectedCourse, setSelectedCourse] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isFiltering, setIsFiltering] = useState(false); // Local loading state for filtering
   const router = useRouter();
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Dialog states
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  // Delete dialog state
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    studentId: "",
+    studentName: "",
+  });
 
   const filteredStudents = students?.userStudents?.filter((student) => {
     const search = searchTerm.toLowerCase();
@@ -155,6 +175,25 @@ export default function StudentsTable({
     setSearchTerm(value);
     // Remove this timeout in production - it's just for demo
     setTimeout(() => setIsFiltering(false), 300);
+  };
+
+  // Handle dialog actions
+  const handleEditStudent = async (studentData: any) => {
+    try {
+      // Call the update student API/action here
+      console.log("Updating student:", studentData);
+      // await updateStudent(studentData.id, studentData);
+
+      setIsEditDialogOpen(false);
+      setSelectedStudent(null);
+    } catch (error) {
+      console.error("Error updating student:", error);
+      throw error; // Re-throw to show error in dialog
+    }
+  };
+  const openEditDialog = (student: any) => {
+    setSelectedStudent(student);
+    setIsEditDialogOpen(true);
   };
 
   // Helper Utility Functions
@@ -230,6 +269,122 @@ export default function StudentsTable({
       />
     </svg>
   );
+
+  // Delete confirmation and execution functions
+  // const handleDeleteStudent = (studentId: string, studentName: string) => {
+  //   toast.custom(
+  //     (t) => (
+  //       <div className='bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-4 max-w-md mt-24'>
+  //         <div className='flex items-start gap-3'>
+  //           <div className='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center'>
+  //             <Trash2 className='h-5 w-5 text-red-600 dark:text-red-400' />
+  //           </div>
+  //           <div className='flex-1 min-w-0'>
+  //             <h3 className='text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1'>
+  //               Delete Student
+  //             </h3>
+  //             <p className='text-sm text-slate-600 dark:text-slate-400 mb-3'>
+  //               Are you sure you want to delete{" "}
+  //               <span className='font-medium'>{studentName}</span>? This action
+  //               cannot be undone.
+  //             </p>
+  //             <div className='flex gap-2'>
+  //               <Button
+  //                 size='sm'
+  //                 variant='outline'
+  //                 onClick={() => toast.dismiss(t)}
+  //                 className='h-8 px-3 text-xs border-slate-300 dark:border-slate-600'
+  //               >
+  //                 Cancel
+  //               </Button>
+  //               <Button
+  //                 size='sm'
+  //                 onClick={async () => {
+  //                   toast.dismiss(t);
+  //                   await executeDelete(studentId, studentName);
+  //                 }}
+  //                 className='h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white'
+  //               >
+  //                 Delete
+  //               </Button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     ),
+  //     {
+  //       duration: Infinity, // Keep open until user interacts
+  //       position: "top-center",
+  //     }
+  //   );
+  // };
+
+  // // Function to execute the actual deletion
+  // const executeDelete = async (studentId: string, studentName: string) => {
+  //   try {
+  //     // Show loading toast
+  //     const loadingToast = toast.loading(`Deleting ${studentName}...`, {
+  //       position: "bottom-right",
+  //     });
+
+  //     await deleteStudent(studentId);
+
+  //     // Dismiss loading toast and show success
+  //     toast.dismiss(loadingToast);
+  //     toast.success(`${studentName} has been deleted successfully!`, {
+  //       position: "bottom-right",
+  //       duration: 3000,
+  //     });
+
+  //     // Refresh the page or update local state
+  //     router.refresh();
+  //   } catch (error) {
+  //     console.error("Error deleting student:", error);
+  //     toast.error(`Failed to delete ${studentName}. Please try again.`, {
+  //       position: "bottom-right",
+  //       duration: 4000,
+  //     });
+  //   }
+  // };
+  // Updated delete handler function
+  const handleDeleteStudent = (studentId: string, studentName: string) => {
+    setDeleteDialog({
+      open: true,
+      studentId,
+      studentName,
+    });
+  };
+
+  // Function to execute the actual deletion
+  const executeDelete = async (studentId: string, studentName: string) => {
+    try {
+      // Close the dialog first
+      setDeleteDialog({ open: false, studentId: "", studentName: "" });
+
+      // Show loading toast
+      const loadingToast = toast.loading(`Deleting ${studentName}...`, {
+        position: "bottom-right",
+      });
+
+      await deleteStudent(studentId);
+
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success(`${studentName} has been deleted successfully!`, {
+        position: "bottom-right",
+        duration: 3000,
+      });
+
+      // Refresh the page or update local state
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast.error(`Failed to delete ${studentName}. Please try again.`, {
+        position: "bottom-right",
+        duration: 4000,
+      });
+    }
+  };
 
   return (
     <Container>
@@ -410,14 +565,13 @@ export default function StudentsTable({
                 </TableHeader>
                 <TableBody>
                   {isLoading || isFiltering ? (
-                    // Show skeleton loading for table rows
                     <>
                       <TableRowSkeleton />
                       <TableRowSkeleton />
                     </>
                   ) : filteredStudents && filteredStudents.length > 0 ? (
-                    filteredStudents.map(
-                      ({
+                    filteredStudents.map((student) => {
+                      const {
                         id,
                         firstName,
                         lastName,
@@ -426,25 +580,13 @@ export default function StudentsTable({
                         year,
                         semester,
                         student_number,
-                        userId,
                         imageUrl,
-                      }) => (
+                      } = student;
+
+                      return (
                         <TableRow
                           key={id}
-                          onClick={() =>
-                            handleStudentClick({
-                              id,
-                              firstName,
-                              lastName,
-                              course,
-                              section,
-                              year,
-                              semester,
-                              student_number,
-                              userId,
-                              imageUrl,
-                            })
-                          }
+                          onClick={() => handleStudentClick(student)}
                           className='cursor-pointer border-b border-slate-100 dark:border-slate-800 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-blue-900/10 dark:hover:to-purple-900/10 transition-all duration-200'
                         >
                           <TableCell className='py-4'>
@@ -459,6 +601,7 @@ export default function StudentsTable({
                               </span>
                             </div>
                           </TableCell>
+
                           <TableCell className='py-4'>
                             <div className='flex items-center gap-3'>
                               <div className='w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center'>
@@ -477,6 +620,7 @@ export default function StudentsTable({
                               </div>
                             </div>
                           </TableCell>
+
                           <TableCell className='py-4'>
                             <div className='flex items-center gap-2'>
                               <Badge
@@ -497,6 +641,7 @@ export default function StudentsTable({
                               </Badge>
                             </div>
                           </TableCell>
+
                           <TableCell className='py-4'>
                             <Badge
                               className={`${getCourseColor(
@@ -506,12 +651,13 @@ export default function StudentsTable({
                               {courseLabels[course]}
                             </Badge>
                           </TableCell>
+
                           <TableCell className='py-4'>
                             <span className='text-slate-700 dark:text-slate-300 font-medium'>
                               {semesterLabels[semester]} Semester
                             </span>
                           </TableCell>
-                          {/* Updated TableCell for Actions column */}
+
                           <TableCell className='py-4 text-right'>
                             <div
                               className='flex justify-end items-center gap-1'
@@ -523,8 +669,7 @@ export default function StudentsTable({
                                 className='p-2 h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md transition-colors duration-200'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  // Handle edit action
+                                  openEditDialog(student);
                                   console.log("Edit student:", id);
                                 }}
                                 title='Edit student'
@@ -539,8 +684,10 @@ export default function StudentsTable({
                                 className='p-2 h-8 w-8 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors duration-200'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  // Handle delete action
+                                  handleDeleteStudent(
+                                    id,
+                                    `${firstName} ${lastName}`
+                                  );
                                   console.log("Delete student:", id);
                                 }}
                                 title='Delete student'
@@ -551,8 +698,8 @@ export default function StudentsTable({
                             </div>
                           </TableCell>
                         </TableRow>
-                      )
-                    )
+                      );
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className='text-center py-12'>
@@ -578,6 +725,54 @@ export default function StudentsTable({
           </CardContent>
         </Card>
       </div>
+      {/* Edit Student Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <AddStudentDialog
+          mode='edit'
+          studentData={selectedStudent}
+          onSubmit={handleEditStudent}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setSelectedStudent(null);
+          }}
+        />
+      </Dialog>
+      {/* Delete Student Dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className='flex items-center gap-3'>
+              <div className='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center'>
+                <Trash2 className='h-5 w-5 text-red-600 dark:text-red-400' />
+              </div>
+              <AlertDialogTitle className='text-sm font-semibold'>
+                Delete Student
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className='text-sm text-slate-600 dark:text-slate-400 ml-13'>
+              Are you sure you want to delete{" "}
+              <span className='font-medium'>{deleteDialog.studentName}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className='h-8 px-3 text-xs'>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                executeDelete(deleteDialog.studentId, deleteDialog.studentName)
+              }
+              className='h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white'
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Container>
   );
 }
